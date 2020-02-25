@@ -1,4 +1,4 @@
-# ps2bq 
+# ps2bq &middot; [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/anpandu/ps2bq/blob/master/LICENSE) 
 
 ## Introduction
 
