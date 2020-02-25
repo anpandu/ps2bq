@@ -50,12 +50,12 @@ ps2bq run
   -w, --worker int               Number of workers (default 4)
 ```
 
-PubSub Messages will each inserted as a new row.
-PubSub Messages received should be JSON Object.
-Message example: `{"id":123,"name":"Alice"}`
-JSON Schema must be provided in order to create table.
-See: https://cloud.google.com/bigquery/docs/schemas#creating_a_json_schema_file
-Message containing invalid JSON and/or invalid according to table schema will be failed to be inserted.
+PubSub Messages will each inserted as a new row.  
+PubSub Messages received should be JSON Object.  
+Message example: `{"id":123,"name":"Alice"}`  
+JSON Schema must be provided in order to create table.  
+See: https://cloud.google.com/bigquery/docs/schemas#creating_a_json_schema_file  
+Message containing invalid JSON and/or invalid according to table schema will be failed to be inserted.  
 
 ## Roadmap
 | Status  | Description |
@@ -64,10 +64,12 @@ Message containing invalid JSON and/or invalid according to table schema will be
 |    ✔    | N worker, 1 message inserted each |
 |    ✔    | N worker, N message inserted each (buffered) |
 |    ✘    | Every t seconds, insert all messages in buffer |
+|    ✘    | Dockerfile |
 |    ✘    | Validate message using JSON schema |
 |    ✘    | Create table with partition |
 |    ✘    | Auto-generate subscription ID |
 |    ✘    | go doc |
+|    ✘    | Kubernetes YAMLs |
 |    ✘    | Multiple sink (?) |
 |    ✘    | Multiple source (?) |
 
