@@ -47,7 +47,7 @@ func init() {
 	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 	runCmd.PersistentFlags().StringP("project", "P", "", "Google Cloud Platform Project ID")
 	runCmd.PersistentFlags().StringP("dataset", "D", "", "BigQuery Dataset")
-	runCmd.PersistentFlags().StringP("table", "T", "", "Bigquery Table")
+	runCmd.PersistentFlags().StringP("table", "T", "", "BigQuery Table")
 	runCmd.PersistentFlags().String("schema", "/tmp/schema.json", "BigQuery JSON table schema file location")
 	runCmd.PersistentFlags().IntP("message-buffer", "n", 1, "Number of message to be inserted")
 	runCmd.PersistentFlags().IntP("worker", "w", 4, "Number of workers")
