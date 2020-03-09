@@ -3,35 +3,31 @@ package worker
 import (
 	"sync"
 
+	"cloud.google.com/go/pubsub"
 	log "github.com/sirupsen/logrus"
 )
 
-type ProcessMessagesFn func([]interface{}, int) error
+type ProcessMessagesFn func([]*pubsub.Message, int) error
 
-func DeployWorker(messageChan <-chan interface{}, msgsLength int, workerId int, fn ProcessMessagesFn, wg *sync.WaitGroup) {
-	var messages []interface{}
+func DeployWorker(messageChan <-chan []*pubsub.Message, workerId int, fn ProcessMessagesFn, wg *sync.WaitGroup) {
+	// var messages []interface{}
 	for {
-		message, more := <-messageChan
+		messages, more := <-messageChan
 		if !more {
 			break
-		}
-		if message != "" {
-			messages = append(messages, message)
-			if len(messages) == msgsLength {
-				err := fn(messages, workerId)
-				if err != nil {
-					log.Error(err.Error())
-				}
-				messages = []interface{}{}
+		} else {
+			err := fn(messages, workerId)
+			if err != nil {
+				log.Error(err.Error())
 			}
 		}
 	}
 	wg.Done()
 }
 
-func DeployWorkers(messageChan <-chan interface{}, msgsLength int, workerTotal int, fn ProcessMessagesFn, wg *sync.WaitGroup) {
+func DeployWorkers(messageChan <-chan []*pubsub.Message, workerTotal int, fn ProcessMessagesFn, wg *sync.WaitGroup) {
 	for idx := 0; idx < workerTotal; idx++ {
 		wg.Add(1)
-		go DeployWorker(messageChan, msgsLength, idx, fn, wg)
+		go DeployWorker(messageChan, idx, fn, wg)
 	}
 }
