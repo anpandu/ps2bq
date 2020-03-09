@@ -115,17 +115,39 @@ func run(cmd *cobra.Command, args []string) {
 		time.Sleep(10000 * time.Millisecond)
 	}
 
-	var messageChan = make(chan interface{})
+	var chanMsg = make(chan *pubsub.Message)
+	var chanMsgs = make(chan []*pubsub.Message)
 	var wg sync.WaitGroup
+
 	log.Info(fmt.Sprintf("Deploying Workers: w=%d n=%d", flagWorker, flagMessageBuffer))
-	WorkerUtil.DeployWorkers(messageChan, flagMessageBuffer, flagWorker, processMessages, &wg)
-	log.Info("Start Processing")
-	sendPubSubMessagesToChannel(flagProject, flagSubscriptionID, messageChan)
-	// sendDummyMessage(messageChan)
+	WorkerUtil.DeployWorkers(chanMsgs, flagWorker, processMessages, &wg)
+
+	log.Info(fmt.Sprintf("Deploying Buffer (length: %d)", flagMessageBuffer))
+	go func(chInput <-chan *pubsub.Message, chOutput chan<- []*pubsub.Message, n int) {
+		rows := []*pubsub.Message{}
+		counter := 0
+		for {
+			row, more := <-chInput
+			if !more {
+				break
+			}
+			rows = append(rows, row)
+			counter++
+			if counter == n {
+				chOutput <- rows
+				rows = []*pubsub.Message{}
+				counter = 0
+			}
+		}
+		close(chOutput)
+	}(chanMsg, chanMsgs, flagMessageBuffer)
+
+	log.Info("Start Receiving PubSub Messages")
+	go sendPubSubMessagesToChannel(flagProject, flagSubscriptionID, chanMsg)
 	wg.Wait()
 }
 
-func sendPubSubMessagesToChannel(projectID string, subID string, messageChan chan<- interface{}) {
+func sendPubSubMessagesToChannel(projectID string, subID string, messageChan chan<- *pubsub.Message) {
 	ctx := context.Background()
 	client, err := pubsub.NewClient(ctx, projectID)
 	if err != nil {
@@ -142,28 +164,13 @@ func sendPubSubMessagesToChannel(projectID string, subID string, messageChan cha
 	}
 }
 
-func sendDummyMessage(messageChan chan<- interface{}) {
-	for i := 0; i < 64; i++ {
-		message := fmt.Sprintf(`{"name":"a%d","age":%d}`, i, i)
-		if rand.Int31n(8) < 1 {
-			// message = fmt.Sprintf("{}broke%d", i)
-			message = fmt.Sprintf(`{"name":"a%d","agex":%d}`, i, i)
-		}
-		messageChan <- message
-		time.Sleep(50 * time.Millisecond)
-		// log.Info("send", message)
-	}
-	log.Info("finished")
-	close(messageChan)
-}
-
-func processMessages(messages []interface{}, workerID int) error {
+func processMessages(messages []*pubsub.Message, workerID int) error {
 	// FILTER MESSAGES
 	var rows []map[string]interface{} // contains JSON of Message data
 	var validRowsStr []string         // contains JSON string of Message data, for logging later
 	var invalidRowsStr []string
 	for _, message := range messages {
-		msgData := message.(*pubsub.Message).Data
+		msgData := message.Data
 		row, err := PSUtil.MessageDataToJSONObject(msgData)
 		// TO-DO: Schema Validation
 		// TO-DO: flush when reaching n seconds
@@ -188,7 +195,7 @@ func processMessages(messages []interface{}, workerID int) error {
 	}
 	for _, message := range messages {
 		// TO-DO: lost connection must not be Ack-ed
-		message.(*pubsub.Message).Ack()
+		message.Ack()
 	}
 	return nil
 }
